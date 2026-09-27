@@ -1,0 +1,12 @@
+{
+  "name": "clouddrive",
+  "version": "1.0.0",
+  "description": "多用户网盘 - 个人文件管理 + 分享链接",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

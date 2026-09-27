@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudDrive · 个人网盘</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232B6CE6' d='M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14a6 6 0 0 0 6 6h13a5 5 0 0 0 5-5c0-2.64-2.05-4.78-4.65-4.96z'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#F5F6F8;--surface:#FFFFFF;--border:#E7E9ED;--border-strong:#D6D9DE;
+  --text:#1B1F24;--text-2:#5B6470;--text-3:#9AA3AF;
+  --accent:#2B6CE6;--accent-soft:#EAF1FE;--accent-hover:#1F5ACB;
+  --danger:#D64545;--warn:#E8A33D;--ok:#3FA66A;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 2px rgba(20,30,50,.04),0 4px 16px rgba(20,30,50,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit;outline:none}
+a{color:var(--accent);text-decoration:none}
+
+/* ===== 登录页 ===== */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:40px;width:380px;max-width:100%}
+.auth-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#2B6CE6,#5B9BF5);display:flex;align-items:center;justify-content:center;color:#fff;margin:0 auto 16px}
+.auth-card h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:4px}
+.auth-card .sub{font-size:13px;color:var(--text-3);text-align:center;margin-bottom:28px}
+.auth-card input{width:100%;padding:11px 14px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;margin-bottom:12px;transition:border-color .12s}
+.auth-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(43,108,230,.12)}
+.auth-card .btn-primary{width:100%;padding:11px;background:var(--accent);color:#fff;border-radius:8px;font-size:14px;font-weight:500;margin-top:4px}
+.auth-card .btn-primary:hover{background:var(--accent-hover)}
+.auth-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--text-2)}
+.auth-switch a{cursor:pointer}
+.auth-err{color:var(--danger);font-size:12.5px;margin-bottom:10px;min-height:18px;text-align:center}
+
+/* ===== 主界面 ===== */
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 20px}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2B6CE6,#5B9BF5);display:flex;align-items:center;justify-content:center;color:#fff}
+.brand-name{font-weight:600;font-size:15px}
+.brand-name small{display:block;font-weight:400;font-size:11px;color:var(--text-3)}
+.nav-label{font-size:11px;color:var(--text-3);padding:14px 10px 6px;letter-spacing:.8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--text-2);cursor:pointer;font-size:13.5px;width:100%;text-align:left;transition:background .12s}
+.nav-item:hover{background:#F0F2F5;color:var(--text)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.user-box{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7B6CF0,#B46CF0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-info .uname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-info .logout{font-size:11.5px;color:var(--text-3);cursor:pointer}
+.user-info .logout:hover{color:var(--danger)}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:14px 28px;position:sticky;top:0;z-index:10}
+.search{flex:1;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;max-width:520px}
+.search input{flex:1;border:none;background:transparent;font-size:13.5px}
+.icon-btn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background .12s;cursor:pointer}
+.icon-btn:hover{background:#ECEEF2}
+.icon-btn.danger:hover{background:#FDEAEA;color:var(--danger)}
+.upload-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;font-weight:500}
+.upload-btn:hover{background:var(--accent-hover)}
+
+.content{padding:8px 28px 40px}
+.view-head{padding:10px 4px 14px}
+.view-title{font-size:20px;font-weight:600}
+.view-sub{font-size:12.5px;color:var(--text-3);margin-top:2px}
+
+.file-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.thead,.trow{display:grid;grid-template-columns:minmax(0,1fr) 100px 150px 130px;align-items:center;gap:12px;padding:0 16px}
+.thead{height:38px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-3);background:#FAFBFC}
+.trow{min-height:52px;border-bottom:1px solid var(--border);cursor:pointer}
+.trow:last-child{border-bottom:none}
+.trow:hover{background:#F7F9FC}
+.fname{display:flex;align-items:center;gap:11px;min-width:0}
+.fname .fic{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.fname .meta{min-width:0;flex:1}
+.fname .name{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fname .sub{font-size:11.5px;color:var(--text-3)}
+.tsize,.tmtime{font-size:12.5px;color:var(--text-2)}
+.row-actions{display:flex;gap:2px;justify-content:flex-end}
+.empty{padding:60px 20px;text-align:center;color:var(--text-3)}
+.empty p{font-size:13.5px}
+
+/* 弹窗 */
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-mask.show{display:flex}
+.modal{background:var(--surface);border-radius:12px;padding:24px;width:380px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:16px;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--text-2);margin-bottom:16px}
+.modal input{width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;margin-bottom:12px}
+.modal input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(43,108,230,.12)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--border-strong)}
+.btn-ghost:hover{background:#F0F2F5}
+.share-result{background:#F7F9FC;border-radius:8px;padding:12px;margin:12px 0;font-size:12.5px;word-break:break-all;line-height:1.8}
+.share-result b{color:var(--accent)}
+
+/* toast */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#1B1F24;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:all .25s;z-index:3000;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 分享页 */
+.share-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.share-card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:36px;width:400px;max-width:100%;text-align:center}
+.share-icon{width:56px;height:56px;border-radius:14px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.share-card h2{font-size:18px;margin-bottom:4px}
+.share-card .meta{font-size:13px;color:var(--text-3);margin-bottom:20px}
+.share-card input{width:100%;padding:11px 14px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;margin-bottom:12px;text-align:center}
+.share-card .btn-primary{width:100%;padding:11px}
+.share-file-info{background:#F7F9FC;border-radius:10px;padding:16px;margin:16px 0;text-align:left}
+.share-file-info .fname-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.share-file-info .fd{font-size:13px;color:var(--text-2)}
+
+/* 传输面板 */
+.transfer-panel{position:fixed;right:20px;bottom:20px;width:380px;max-width:calc(100vw - 40px);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.15);z-index:1500;display:none;flex-direction:column;max-height:420px}
+.transfer-panel.show{display:flex}
+.transfer-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.transfer-head h3{font-size:14px;font-weight:600}
+.transfer-close{cursor:pointer;color:var(--text-3);font-size:18px;line-height:1;padding:4px}
+.transfer-list{overflow-y:auto;flex:1;padding:8px 0}
+.transfer-item{padding:10px 16px;border-bottom:1px solid var(--border)}
+.transfer-item:last-child{border-bottom:none}
+.transfer-item .tname{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.transfer-item .tinfo{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-3);margin-bottom:6px}
+.transfer-item .tspeed{color:var(--accent)}
+.tprogress{height:4px;background:#ECEEF2;border-radius:2px;overflow:hidden}
+.tprogress .tbar{height:100%;background:var(--accent);border-radius:2px;transition:width .2s}
+.transfer-empty{padding:30px;text-align:center;color:var(--text-3);font-size:13px}
+
+/* 移动端 */
+.drawer-mask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+.drawer-mask.show{display:block}
+.hamburger{display:none}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:100;transform:translateX(-100%);transition:transform .25s;box-shadow:2px 0 16px rgba(0,0,0,.1)}
+  .sidebar.open{transform:translateX(0)}
+  .hamburger{display:flex}
+  .content{padding:8px 14px 40px}
+  .topbar{padding:12px 14px;gap:8px}
+  .search{max-width:none}
+  .thead .tsize,.trow .tsize,.thead .tshare,.trow .tshare{display:none}
+  .thead,.trow{grid-template-columns:minmax(0,1fr) 90px 40px;padding:0 12px}
+  .upload-btn span{display:none}
+  .upload-btn{padding:7px 10px}
+  .tmtime{font-size:11px;white-space:nowrap}
+  .fname .fic{width:26px;height:26px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 登录视图 ===== -->
+<div id="view-login" class="auth-wrap" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14a6 6 0 0 0 6 6h13a5 5 0 0 0 5-5c0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+    </div>
+    <h1 id="auth-title">登录 CloudDrive</h1>
+    <p class="sub" id="auth-sub">登录你的个人网盘</p>
+    <div class="auth-err" id="auth-err"></div>
+    <input type="text" id="auth-username" placeholder="用户名" autocomplete="username">
+    <input type="password" id="auth-password" placeholder="密码" autocomplete="current-password">
+    <button class="btn-primary" onclick="doAuth()" id="auth-btn">登 录</button>
+    <div class="auth-switch" id="auth-switch">还没有账号？<a onclick="toggleAuthMode()">立即注册</a></div>
+  </div>
+</div>
+
+<!-- ===== 分享视图 ===== -->
+<div id="view-share" class="share-wrap" style="display:none">
+  <div class="share-card">
+    <div class="share-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B6CE6" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <h2>收到一个分享文件</h2>
+    <p class="meta" id="share-meta">请输入分享密码查看文件</p>
+    <div id="share-pwd-box">
+      <input type="password" id="share-pwd" placeholder="分享密码" onkeydown="if(event.key==='Enter')checkShare()">
+      <div class="auth-err" id="share-err"></div>
+      <button class="btn-primary" onclick="checkShare()">查看文件</button>
+    </div>
+    <div id="share-info" style="display:none">
+      <div class="share-file-info">
+        <div class="fname-row">
+          <div class="fic" id="share-fic"></div>
+          <div>
+            <div style="font-weight:500;font-size:14px" id="share-fname"></div>
+            <div class="fd" id="share-fmeta"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="downloadShared()" style="width:100%">下载文件</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 主视图 ===== -->
+<div id="view-main" class="app" style="display:none">
+  <div class="drawer-mask" id="drawer-mask" onclick="toggleSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14a6 6 0 0 0 6 6h13a5 5 0 0 0 5-5c0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+      </div>
+      <div class="brand-name">CloudDrive<small>个人网盘</small></div>
+    </div>
+    <div class="nav-label">导航</div>
+    <button class="nav-item active" onclick="setCat('all',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+      <span>全部文件</span>
+    </button>
+    <button class="nav-item" onclick="setCat('image',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-5 4 4 3-3 6 6"/></svg>
+      <span>图片</span>
+    </button>
+    <button class="nav-item" onclick="setCat('doc',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 13h6"/></svg>
+      <span>文档</span>
+    </button>
+    <button class="nav-item" onclick="setCat('video',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3"/></svg>
+      <span>视频</span>
+    </button>
+    <button class="nav-item" onclick="setCat('audio',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span>音频</span>
+    </button>
+    <button class="nav-item" onclick="showTransfers(this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+      <span>传输</span>
+      <span class="count-badge" id="transfer-badge" style="display:none;background:var(--accent);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:auto"></span>
+    </button>
+    <div class="user-box">
+      <div class="avatar" id="user-avatar">U</div>
+      <div class="user-info">
+        <div class="uname" id="user-name">用户</div>
+        <div class="logout" onclick="doLogout()">退出登录</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="icon-btn hamburger" onclick="toggleSidebar()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA3AF" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="search" type="text" placeholder="搜索文件名…" oninput="render()">
+      </div>
+      <button class="icon-btn" title="刷新" onclick="loadFiles()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <span>上传</span>
+      </button>
+    </div>
+
+    <div class="content">
+      <div class="view-head">
+        <div class="view-title">我的文件</div>
+        <div class="view-sub" id="view-sub">加载中…</div>
+      </div>
+      <div id="file-container"><div class="empty"><p>加载中…</p></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- 分享弹窗 -->
+<div class="modal-mask" id="share-modal">
+  <div class="modal">
+    <h3>创建分享链接</h3>
+    <p id="share-filename-label">为文件设置分享密码</p>
+    <input type="text" id="share-pwd-input" placeholder="分享密码（留空则无需密码）">
+    <div id="share-result-box" style="display:none">
+      <div class="share-result" id="share-result"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeShareModal()">关闭</button>
+      <button class="btn btn-primary" id="share-confirm-btn" onclick="createShare()">生成链接</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" multiple style="display:none">
+
+<!-- 传输面板 -->
+<div class="transfer-panel" id="transfer-panel">
+  <div class="transfer-head">
+    <h3>传输列表</h3>
+    <span class="transfer-close" onclick="toggleTransferPanel(false)">&times;</span>
+  </div>
+  <div class="transfer-list" id="transfer-list">
+    <div class="transfer-empty">暂无传输任务</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = ''; // 同源部署，前后端同一个域名
+let state = { files: [], cat: 'all', q: '', token: localStorage.getItem('cd_token') || '', username: localStorage.getItem('cd_user') || '' };
+let pendingShareFile = '';
+
+/* ===== 工具 ===== */
+function $(id){return document.getElementById(id)}
+function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';if(b<1073741824)return (b/1048576).toFixed(1)+' MB';return (b/1073741824).toFixed(2)+' GB'}
+function fmtTime(ts){const d=new Date(ts);const p=n=>String(n).padStart(2,'0');return p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
+function getType(n){const e=n.split('.').pop().toLowerCase();if(['jpg','jpeg','png','gif','bmp','webp','svg'].includes(e))return'image';if(['doc','docx','pdf','txt','md','xls','xlsx','ppt','pptx','csv'].includes(e))return'doc';if(['mp4','webm','mov','avi','mkv'].includes(e))return'video';if(['mp3','wav','m4a','flac'].includes(e))return'audio';if(['zip','rar','7z','tar','gz'].includes(e))return'archive';return'other'}
+const TM={image:['#E8A33D','#FFF3E0','图片'],doc:['#3FA66A','#E6F4EC','文档'],video:['#D64545','#FDEAEA','视频'],audio:['#7B6CF0','#EFEBFE','音频'],archive:['#5B6470','#EEF0F3','压缩包'],other:['#2B6CE6','#EAF1FE','文件']};
+function ficSvg(t){const c=TM[t][0];const s='width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';if(t==='image')return'<svg '+s+'><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-5 4 4 3-3 6 6"/></svg>';if(t==='doc')return'<svg '+s+'><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 13h6"/></svg>';if(t==='video')return'<svg '+s+'><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3"/></svg>';if(t==='audio')return'<svg '+s+'><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';if(t==='archive')return'<svg '+s+'><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v5M9 13h6"/></svg>';return'<svg '+s+'><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>'}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escJs(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+let tt;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2000)}
+function authHeader(){return{'Authorization':'Bearer '+state.token,'Content-Type':'application/json'}}
+
+/* ===== 登录/注册 ===== */
+let authMode='login';
+function toggleAuthMode(){
+  authMode = authMode==='login'?'register':'login';
+  $('auth-title').textContent = authMode==='login'?'登录 CloudDrive':'注册账号';
+  $('auth-sub').textContent = authMode==='login'?'登录你的个人网盘':'创建新账号';
+  $('auth-btn').textContent = authMode==='login'?'登 录':'注 册';
+  $('auth-switch').innerHTML = authMode==='login' ? '还没有账号？<a onclick="toggleAuthMode()">立即注册</a>' : '已有账号？<a onclick="toggleAuthMode()">去登录</a>';
+  $('auth-err').textContent='';
+}
+async function doAuth(){
+  const u=$('auth-username').value.trim(), p=$('auth-password').value;
+  if(!u||!p){$('auth-err').textContent='请输入用户名和密码';return}
+  try{
+    const r=await fetch(API+(authMode==='login'?'/api/login':'/api/register'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();
+    if(d.ok){
+      state.token=d.token;state.username=d.username;
+      localStorage.setItem('cd_token',d.token);localStorage.setItem('cd_user',d.username);
+      showMain();
+    }else{
+      $('auth-err').textContent=d.error||'失败';
+    }
+  }catch(e){$('auth-err').textContent='网络错误'}
+}
+async function doLogout(){
+  try{await fetch(API+'/api/logout',{method:'POST',headers:authHeader()})}catch(e){}
+  state.token='';state.username='';localStorage.removeItem('cd_token');localStorage.removeItem('cd_user');
+  location.reload();
+}
+
+/* ===== 文件操作 ===== */
+async function loadFiles(){
+  try{
+    const r=await fetch(API+'/api/files',{headers:{'Authorization':'Bearer '+state.token}});
+    if(r.status===401){doLogout();return}
+    const d=await r.json();
+    state.files=(d.files||[]).map(f=>({...f,type:getType(f.name)}));
+    render();
+  }catch(e){
+    $('file-container').innerHTML='<div class="empty"><p>加载失败：'+esc(e.message)+'</p></div>';
+  }
+}
+function setCat(c,btn){
+  state.cat=c;
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const titles={all:'全部文件',image:'图片',doc:'文档',video:'视频',audio:'音频'};
+  document.querySelector('.view-title').textContent=titles[c]||'全部文件';
+  render();
+}
+function render(){
+  const q=$('search').value.toLowerCase();
+  const list=state.files.filter(f=>{
+    if(q&&!f.name.toLowerCase().includes(q))return false;
+    if(state.cat!=='all'&&f.type!==state.cat)return false;
+    return true;
+  });
+  $('view-sub').textContent='共 '+list.length+' 个文件';
+  if(!list.length){
+    $('file-container').innerHTML='<div class="file-table"><div class="empty"><p>这里还没有文件</p><p style="font-size:12px;margin-top:4px">点击右上角「上传」按钮添加</p></div></div>';
+    return;
+  }
+  let h='<div class="file-table"><div class="thead"><div>名称</div><div class="tsize">大小</div><div>修改时间</div><div class="tshare">操作</div></div>';
+  list.forEach(f=>{
+    h+='<div class="trow">'+
+      '<div class="fname"><div class="fic" style="background:'+TM[f.type][1]+'">'+ficSvg(f.type)+'</div>'+
+      '<div class="meta"><div class="name">'+esc(f.name)+'</div><div class="sub">'+TM[f.type][2]+'</div></div></div>'+
+      '<div class="tsize">'+fmtSize(f.size)+'</div>'+
+      '<div class="tmtime">'+fmtTime(f.mtime)+'</div>'+
+      '<div class="row-actions">'+
+        '<button class="icon-btn" title="分享" onclick="openShareModal(\''+escJs(f.name)+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>'+
+        '<button class="icon-btn" title="下载" onclick="downloadFile(\''+escJs(f.name)+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>'+
+        '<button class="icon-btn danger" title="删除" onclick="deleteFile(\''+escJs(f.name)+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>'+
+      '</div></div>';
+  });
+  h+='</div>';
+  $('file-container').innerHTML=h;
+}
+function downloadFile(name){
+  const tid=addTask(name,'down',0);
+  toggleTransferPanel(true);
+  fetch(API+'/files/'+encodeURIComponent(name),{headers:{'Authorization':'Bearer '+state.token}}).then(r=>{
+    const total=parseInt(r.headers.get('content-length'))||0;
+    updateTask(tid,0,total);
+    const reader=r.body.getReader();
+    let loaded=0;
+    function pump(){reader.read().then(({done,value})=>{
+      if(done){finishTask(tid,true);return}
+      loaded+=value.length;updateTask(tid,loaded,total);pump();
+    })}
+    pump();
+    r.blob().then(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=name;a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
+  }).catch(()=>finishTask(tid,false));
+}
+async function deleteFile(name){
+  if(!confirm('确定删除「'+name+'」？'))return;
+  const r=await fetch(API+'/api/files/'+encodeURIComponent(name),{method:'DELETE',headers:{'Authorization':'Bearer '+state.token}});
+  if(r.ok){toast('已删除');loadFiles()}
+  else toast('删除失败');
+}
+
+/* ===== 传输任务 ===== */
+let transferTasks=[];
+function fmtSpeed(bps){if(bps<1024)return bps+' B/s';if(bps<1048576)return (bps/1024).toFixed(1)+' KB/s';return (bps/1048576).toFixed(2)+' MB/s'}
+function addTask(name,type,total){
+  const id=Date.now()+Math.random();
+  transferTasks.push({id,name,type,total,loaded:0,speed:0,status:'running'});
+  renderTransfers();
+  return id;
+}
+function updateTask(id,loaded,total){
+  const t=transferTasks.find(t=>t.id===id);
+  if(!t)return;
+  t.loaded=loaded;if(total)t.total=total;
+  if(t._last){
+    const dt=Date.now()-t._last.time;
+    if(dt>300){t.speed=((loaded-t._last.loaded)/dt)*1000;t._last={time:Date.now(),loaded};}
+  }else{t._last={time:Date.now(),loaded};}
+  renderTransfers();
+}
+function finishTask(id,ok){
+  const t=transferTasks.find(t=>t.id===id);
+  if(t){t.status=ok?'done':'error';setTimeout(()=>{transferTasks=transferTasks.filter(x=>x.id!==id);renderTransfers()},3000);}
+  renderTransfers();
+}
+function renderTransfers(){
+  const list=$('transfer-list');
+  const running=transferTasks.filter(t=>t.status==='running');
+  const badge=$('transfer-badge');
+  if(running.length){badge.style.display='inline';badge.textContent=running.length}
+  else{badge.style.display='none'}
+  if(!transferTasks.length){list.innerHTML='<div class="transfer-empty">暂无传输任务</div>';return}
+  list.innerHTML=transferTasks.map(t=>{
+    const pct=t.total?Math.round(t.loaded/t.total*100):0;
+    let statusTxt=t.status==='done'?'已完成':t.status==='error'?'失败':fmtSpeed(t.speed);
+    let statusCls=t.status==='done'?'color:var(--ok)':t.status==='error'?'color:var(--danger)':'color:var(--accent)';
+    return '<div class="transfer-item">'+
+      '<div class="tname">'+(t.type==='up'?'↑ ':'↓ ')+esc(t.name)+'</div>'+
+      '<div class="tinfo"><span style="'+statusCls+'">'+statusTxt+'</span><span>'+pct+'%</span></div>'+
+      '<div class="tprogress"><div class="tbar" style="width:'+pct+'%"></div></div>'+
+    '</div>';
+  }).join('');
+}
+function toggleTransferPanel(show){
+  $('transfer-panel').classList.toggle('show',show);
+}
+function showTransfers(btn){
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  toggleTransferPanel(true);
+  document.querySelector('.sidebar').classList.remove('open');
+  $('drawer-mask').classList.remove('show');
+}
+
+/* ===== 上传 ===== */
+$('file-input').addEventListener('change',async e=>{
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  toggleTransferPanel(true);
+  for(const f of files){
+    const tid=addTask(f.name,'up',f.size);
+    try{
+      const fd=new FormData();fd.append('file',f);
+      await new Promise((res,rej)=>{
+        const xhr=new XMLHttpRequest();
+        xhr.open('POST',API+'/api/upload');
+        xhr.setRequestHeader('Authorization','Bearer '+state.token);
+        xhr.timeout=120000;
+        xhr.upload.onprogress=ev=>{if(ev.lengthComputable)updateTask(tid,ev.loaded,ev.total)};
+        xhr.onload=()=>{
+          const ok=xhr.status===200;
+          updateTask(tid,f.size,f.size);
+          finishTask(tid,ok);
+          ok?res():rej(new Error('HTTP '+xhr.status));
+        };
+        xhr.onerror=()=>{updateTask(tid,f.size,f.size);finishTask(tid,false);rej(new Error('网络错误'))};
+        xhr.ontimeout=()=>{updateTask(tid,f.size,f.size);finishTask(tid,false);rej(new Error('超时'))};
+        xhr.send(fd);
+      });
+      toast('上传完成：'+f.name);
+    }catch(err){toast('上传失败：'+f.name+' - '+err.message)}
+  }
+  loadFiles();
+  e.target.value='';
+});
+
+/* ===== 分享 ===== */
+function openShareModal(name){
+  pendingShareFile=name;
+  $('share-filename-label').textContent='为「'+name+'」设置分享密码';
+  $('share-pwd-input').value='';
+  $('share-result-box').style.display='none';
+  $('share-modal').classList.add('show');
+}
+function closeShareModal(){$('share-modal').classList.remove('show')}
+async function createShare(){
+  const pwd=$('share-pwd-input').value;
+  const r=await fetch(API+'/api/share',{method:'POST',headers:authHeader(),body:JSON.stringify({filename:pendingShareFile,password:pwd})});
+  const d=await r.json();
+  if(d.ok){
+    const shareUrl=location.origin+location.pathname+'?share='+d.shareToken;
+    $('share-result').innerHTML='分享链接：<b>'+esc(shareUrl)+'</b><br>'+(pwd?'分享密码：<b>'+esc(pwd)+'</b>':'此链接无需密码');
+    $('share-result-box').style.display='block';
+    $('share-confirm-btn').style.display='none';
+    toast('分享链接已生成');
+  }else{toast(d.error||'生成失败')}
+}
+
+/* ===== 分享访问页 ===== */
+function checkShare(){
+  const token=new URLSearchParams(location.search).get('share');
+  const pwd=$('share-pwd').value;
+  fetch(API+'/api/shared/'+token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})})
+  .then(r=>r.json()).then(d=>{
+    if(d.filename){
+      $('share-pwd-box').style.display='none';
+      $('share-info').style.display='block';
+      $('share-fname').textContent=d.filename;
+      $('share-fmeta').textContent=fmtSize(d.size)+' · 来自 '+d.owner;
+      $('share-fic').innerHTML=ficSvg(getType(d.filename));
+      $('share-fic').style.background=TM[getType(d.filename)][1];
+      window._sharePwd=pwd;window._shareToken=token;
+    }else{
+      $('share-err').textContent=d.error||'验证失败';
+    }
+  }).catch(()=>$('share-err').textContent='网络错误');
+}
+function downloadShared(){
+  window.open(API+'/share-dl/'+window._shareToken+'?pwd='+encodeURIComponent(window._sharePwd||''),'_blank');
+}
+
+/* ===== 视图切换 ===== */
+function showLogin(){
+  $('view-login').style.display='flex';$('view-main').style.display='none';$('view-share').style.display='none';
+}
+function showMain(){
+  $('view-login').style.display='none';$('view-main').style.display='grid';$('view-share').style.display='none';
+  $('user-name').textContent=state.username;
+  $('user-avatar').textContent=state.username[0].toUpperCase();
+  loadFiles();
+}
+function showShare(){
+  $('view-login').style.display='none';$('view-main').style.display='none';$('view-share').style.display='flex';
+}
+function toggleSidebar(){
+  $('sidebar').classList.toggle('open');
+  $('drawer-mask').classList.toggle('show');
+}
+
+/* ===== 初始化 ===== */
+(function init(){
+  const shareToken=new URLSearchParams(location.search).get('share');
+  if(shareToken){showShare();return}
+  if(state.token){showMain()}else{showLogin()}
+})();
+</script>
+</body>
+</html>
